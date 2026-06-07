@@ -9,6 +9,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import PayslipsScreen from '../screens/PayslipsScreen';
 import LeaveScreen from '../screens/LeaveScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
+import AnnouncementsScreen from '../screens/AnnouncementsScreen';
 import { COLORS, FONTS } from '../utils/theme';
 
 const Stack = createNativeStackNavigator();
@@ -85,6 +86,15 @@ function MainTabs() {
           title: 'Attendance',
           headerTitle: '🕐 Attendance',
           tabBarIcon: ({ focused }) => <TabIcon emoji="🕐" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Notices"
+        component={AnnouncementsScreen}
+        options={{
+          title: 'Notices',
+          headerTitle: '📢 Announcements',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📢" focused={focused} />,
         }}
       />
     </Tab.Navigator>

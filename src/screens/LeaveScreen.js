@@ -25,6 +25,7 @@ const statusLabel = { pending: '⏳ Pending', approved: '✅ Approved', rejected
 
 export default function LeaveScreen() {
   const [leaves, setLeaves] = useState([]);
+  const [balances, setBalances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -39,8 +40,12 @@ export default function LeaveScreen() {
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
 
   const load = async () => {
-    const data = await api('/api/me/leave');
+    const [data, bal] = await Promise.all([
+      api('/api/me/leave'),
+      api('/api/me/leave-balance'),
+    ]);
     setLeaves(Array.isArray(data) ? data : []);
+    setBalances(Array.isArray(bal) ? bal : []);
     setLoading(false);
   };
 
@@ -92,6 +97,19 @@ export default function LeaveScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Leave Balance Strip */}
+        {balances.length > 0 && (
+          <View style={styles.balanceStrip}>
+            {balances.filter(b => b.entitled > 0 || b.leave_type === 'annual').slice(0,4).map(b => (
+              <View key={b.leave_type} style={styles.balanceItem}>
+                <Text style={styles.balVal}>{b.entitled - b.used}</Text>
+                <Text style={styles.balLabel}>{b.leave_type.charAt(0).toUpperCase() + b.leave_type.slice(1)}</Text>
+                <Text style={styles.balSub}>{b.used}/{b.entitled}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <FlatList
           data={filtered}
@@ -256,4 +274,15 @@ const styles = StyleSheet.create({
   daysPreviewText: { color: COLORS.info, ...FONTS.bold, fontSize: 14 },
   submitBtn: { backgroundColor: COLORS.navy, borderRadius: RADIUS.md, padding: 15, alignItems: 'center', marginTop: 8 },
   submitText: { color: '#fff', fontSize: 15, ...FONTS.bold },
+  balanceStrip: {
+    flexDirection: 'row', backgroundColor: COLORS.navy,
+    paddingVertical: 10, paddingHorizontal: 16, gap: 8,
+  },
+  balanceItem: {
+    flex: 1, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: RADIUS.md, paddingVertical: 8,
+  },
+  balVal: { fontSize: 20, ...FONTS.black, color: '#fff' },
+  balLabel: { fontSize: 10, color: 'rgba(255,255,255,0.8)', ...FONTS.semibold, marginTop: 1 },
+  balSub: { fontSize: 9, color: 'rgba(255,255,255,0.5)' },
 });

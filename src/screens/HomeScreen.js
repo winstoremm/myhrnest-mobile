@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   RefreshControl, ActivityIndicator, Alert,
 } from 'react-native';
+import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, RADIUS, SHADOW } from '../utils/theme';
@@ -40,11 +41,21 @@ export default function HomeScreen({ navigation }) {
 
   const handleCheckIn = async () => {
     setCheckInLoading(true);
-    const res = await api('/api/me/checkin', 'POST');
+    // Request GPS permission
+    let gpsInfo = '';
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        gpsInfo = `${loc.coords.latitude.toFixed(5)}, ${loc.coords.longitude.toFixed(5)}`;
+      }
+    } catch (e) { /* GPS optional */ }
+
+    const res = await api('/api/me/checkin', 'POST', gpsInfo ? { location: gpsInfo } : {});
     setCheckInLoading(false);
     if (res.ok) {
       const msg = res.action === 'checkin'
-        ? `✅ Checked in at ${res.time}`
+        ? `✅ Checked in at ${res.time}${gpsInfo ? `\n📍 ${gpsInfo}` : ''}`
         : `🏠 Checked out at ${res.time}`;
       Alert.alert('Attendance', msg);
       const updated = await api('/api/me/checkin');
