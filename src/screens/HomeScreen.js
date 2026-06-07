@@ -13,6 +13,8 @@ export default function HomeScreen({ navigation }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [checkInStatus, setCheckInStatus] = useState(null);
+  const [checkInLoading, setCheckInLoading] = useState(false);
 
   const loadData = async () => {
     try {
@@ -29,8 +31,27 @@ export default function HomeScreen({ navigation }) {
 
       const profileData = await api('/api/me/profile');
       setProfile(profileData);
+
+      const ciStatus = await api('/api/me/checkin');
+      setCheckInStatus(ciStatus);
     } catch (e) {}
     setLoading(false);
+  };
+
+  const handleCheckIn = async () => {
+    setCheckInLoading(true);
+    const res = await api('/api/me/checkin', 'POST');
+    setCheckInLoading(false);
+    if (res.ok) {
+      const msg = res.action === 'checkin'
+        ? `✅ Checked in at ${res.time}`
+        : `🏠 Checked out at ${res.time}`;
+      Alert.alert('Attendance', msg);
+      const updated = await api('/api/me/checkin');
+      setCheckInStatus(updated);
+    } else {
+      Alert.alert('Attendance', res.message || res.error || 'Already completed for today.');
+    }
   };
 
   useFocusEffect(useCallback(() => { loadData(); }, []));
@@ -92,6 +113,9 @@ export default function HomeScreen({ navigation }) {
         </View>
       )}
 
+      {/* Check-In / Check-Out Widget */}
+      <CheckInWidget status={checkInStatus} onPress={handleCheckIn} loading={checkInLoading} />
+
       {/* Quick Actions */}
       <Text style={styles.sectionTitle}>Quick Access</Text>
       <View style={styles.quickGrid}>
@@ -120,6 +144,45 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.logoutText}>🚪 Sign Out</Text>
       </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+function CheckInWidget({ status, onPress, loading }) {
+  let btnColor = COLORS.green;
+  let btnLabel = '🟢 Check In';
+  let subText = "You haven't checked in yet today.";
+  let cardBg = COLORS.successLight;
+
+  if (status?.status === 'checked_in') {
+    btnColor = '#D97706';
+    btnLabel = '🏠 Check Out';
+    subText = `Checked in at ${status.check_in}`;
+    cardBg = COLORS.warningLight;
+  } else if (status?.status === 'checked_out') {
+    btnColor = COLORS.gray400;
+    btnLabel = '✅ Done for Today';
+    subText = `${status.check_in} → ${status.check_out}`;
+    cardBg = '#F3F4F6';
+  }
+
+  return (
+    <View style={[styles.ciCard, { backgroundColor: cardBg }]}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.ciTitle}>Today's Attendance</Text>
+        <Text style={styles.ciSub}>{subText}</Text>
+      </View>
+      <TouchableOpacity
+        style={[styles.ciBtn, { backgroundColor: btnColor }]}
+        onPress={onPress}
+        disabled={loading || status?.status === 'checked_out'}
+        activeOpacity={0.85}
+      >
+        {loading
+          ? <ActivityIndicator color="#fff" size="small" />
+          : <Text style={styles.ciBtnText}>{btnLabel}</Text>
+        }
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -187,4 +250,12 @@ const styles = StyleSheet.create({
     padding: 14, alignItems: 'center',
   },
   logoutText: { color: COLORS.danger, fontSize: 14, ...FONTS.semibold },
+  ciCard: {
+    borderRadius: RADIUS.lg, padding: 16, marginBottom: 24,
+    flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.card,
+  },
+  ciTitle: { fontSize: 13, ...FONTS.bold, color: COLORS.navy, marginBottom: 3 },
+  ciSub: { fontSize: 12, color: COLORS.gray600 },
+  ciBtn: { borderRadius: RADIUS.md, paddingVertical: 10, paddingHorizontal: 16, minWidth: 120, alignItems: 'center' },
+  ciBtnText: { color: '#fff', fontSize: 13, ...FONTS.bold },
 });
