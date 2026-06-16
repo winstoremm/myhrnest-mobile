@@ -4,15 +4,15 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
   StatusBar, ScrollView,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, FONTS, RADIUS } from '../utils/theme';
-import { api } from '../utils/api';
+import { useAuthStore } from '../store/authStore';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const signIn = useAuthStore((s) => s.signIn);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -20,18 +20,13 @@ export default function LoginScreen({ navigation }) {
       return;
     }
     setLoading(true);
-    try {
-      const res = await api('/api/auth/login', 'POST', { email: email.trim(), password });
-      if (res.user) {
-        await AsyncStorage.setItem('user_data', JSON.stringify(res.user));
-        navigation.replace('Main');
-      } else {
-        Alert.alert('Login Failed', res.error || 'Invalid email or password.');
-      }
-    } catch (e) {
-      Alert.alert('Error', 'Connection failed. Please try again.');
-    }
+    const { error } = await signIn(email.trim(), password);
     setLoading(false);
+    if (error) {
+      Alert.alert('Login Failed', error);
+    } else {
+      navigation.replace('Main');
+    }
   };
 
   return (
@@ -41,7 +36,6 @@ export default function LoginScreen({ navigation }) {
     >
       <StatusBar barStyle="light-content" backgroundColor={COLORS.navyDark} />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoBox}>
             <Text style={styles.logoText}>MyHR</Text>
@@ -51,7 +45,6 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.subtitle}>Employee Portal</Text>
         </View>
 
-        {/* Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Sign In</Text>
           <Text style={styles.cardSub}>Access your HR portal</Text>
@@ -101,7 +94,7 @@ export default function LoginScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footer}>© 2025 MyHR Nest · Powered by Win Central</Text>
+        <Text style={styles.footer}>© 2026 MyHR Nest · Powered by Win Central</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -136,8 +129,7 @@ const styles = StyleSheet.create({
   passWrap: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1.5, borderColor: COLORS.gray200, borderRadius: RADIUS.md,
-    backgroundColor: '#FAFAFA', overflow: 'hidden',
-    paddingLeft: 12,
+    backgroundColor: '#FAFAFA', overflow: 'hidden', paddingLeft: 12,
   },
   eyeBtn: { padding: 12 },
   eyeText: { fontSize: 16 },
